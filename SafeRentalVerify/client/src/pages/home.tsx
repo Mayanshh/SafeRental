@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Shield, FileText, Download, CheckCircle, User, Search } from "lucide-react";
+import { Shield, FileText, Download, CheckCircle, User, Search, Github, Linkedin, Twitter, Mail, Code2, Heart } from "lucide-react";
 
 export default function Home() {
   return (
@@ -171,6 +171,112 @@ export default function Home() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Contact Section */}
+      <section id="contact" className="py-20 bg-gradient-to-br from-primary/5 via-secondary/5 to-accent/5" data-testid="contact-section">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Get In Touch</h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Have questions or need support? Connect with our developer
+            </p>
+          </div>
+          
+          <div className="max-w-4xl mx-auto">
+            <Card className="p-8 shadow-2xl border-border/50 bg-card/80 backdrop-blur-sm">
+              <CardContent className="p-0">
+                <div className="text-center mb-8">
+                  <div className="w-24 h-24 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                    <Code2 className="h-12 w-12 text-white" />
+                  </div>
+                  <h3 className="text-2xl font-bold mb-2">Mayansh Bangali</h3>
+                  <p className="text-muted-foreground mb-1">Full Stack Developer</p>
+                  <p className="text-sm text-muted-foreground flex items-center justify-center gap-1">
+                    Made with <Heart className="h-4 w-4 text-red-500 fill-red-500" /> for secure rental agreements
+                  </p>
+                </div>
+                
+                <div className="grid md:grid-cols-2 gap-8">
+                  <div className="space-y-4">
+                    <h4 className="text-lg font-semibold mb-4">Connect with me</h4>
+                    
+                    <a 
+                      href="https://github.com/Mayanshh" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors group"
+                    >
+                      <div className="w-10 h-10 bg-gray-900 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <Github className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <p className="font-medium">GitHub</p>
+                        <p className="text-sm text-muted-foreground">@Mayanshh</p>
+                      </div>
+                    </a>
+                    
+                    <a 
+                      href="https://in.linkedin.com/in/mayansh-bangali-17ab86331" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors group"
+                    >
+                      <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <Linkedin className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <p className="font-medium">LinkedIn</p>
+                        <p className="text-sm text-muted-foreground">Mayansh Bangali</p>
+                      </div>
+                    </a>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <h4 className="text-lg font-semibold mb-4">Reach out</h4>
+                    
+                    <a 
+                      href="https://x.com/MayanshB" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors group"
+                    >
+                      <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <Twitter className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <p className="font-medium">X (Twitter)</p>
+                        <p className="text-sm text-muted-foreground">@MayanshB</p>
+                      </div>
+                    </a>
+                    
+                    <a 
+                      href="mailto:mayanshbangali49@gmail.com" 
+                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors group"
+                    >
+                      <div className="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <Mail className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <p className="font-medium">Email</p>
+                        <p className="text-sm text-muted-foreground">mayanshbangali49@gmail.com</p>
+                      </div>
+                    </a>
+                  </div>
+                </div>
+                
+                <div className="mt-8 p-6 bg-muted/30 rounded-lg text-center">
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Built with React, TypeScript, MongoDB, and Firebase
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    SafeRental - Secure rental agreements made simple
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>
