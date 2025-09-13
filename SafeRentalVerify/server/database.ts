@@ -56,7 +56,7 @@ async function ensureIndexes() {
     await db.collection('users').createIndex({ username: 1 }, { unique: true });
     
     // Counter collection for atomic agreement number generation
-    await db.collection('counters').createIndex({ _id: 1 }, { unique: true });
+    // _id field is already unique in MongoDB, so no need to specify unique constraint
     
     console.log('✅ Database indexes created successfully');
   } catch (error) {
