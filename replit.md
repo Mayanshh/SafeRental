@@ -1,6 +1,6 @@
 # Overview
 
-SafeRental is a comprehensive web application for creating, managing, and verifying legally compliant rental agreements. The platform facilitates secure transactions between tenants and landlords by providing built-in verification features, document generation, and multi-layer authentication. The system allows tenants to create rental agreements through a step-by-step form process, while landlords can verify and approve these agreements through OTP-based verification systems.
+SafeRental is a web application for creating and managing legally compliant rental agreements with built-in verification features. The platform allows tenants to create rental agreements and landlords to verify them, providing secure document management, OTP-based verification, and PDF generation capabilities. The system is designed to protect both tenants and landlords through a trusted verification process.
 
 # User Preferences
 
@@ -9,70 +9,58 @@ Preferred communication style: Simple, everyday language.
 # System Architecture
 
 ## Frontend Architecture
+The frontend is built using React with TypeScript, implementing a modern component-based architecture. The application uses Vite as the build tool and development server, providing fast hot module replacement and optimized production builds. The UI is constructed with shadcn/ui components based on Radix UI primitives, styled with Tailwind CSS for consistent design patterns. Client-side routing is handled by Wouter for lightweight navigation between pages including home, agreement creation, verification, and dashboard views.
 
-The frontend is built using React 18 with TypeScript, implementing a modern component-based architecture. The application uses Vite as the build tool and development server for fast hot module replacement and optimized builds. The UI framework is based on shadcn/ui components built on top of Radix UI primitives, providing accessible and customizable components.
-
-Key architectural decisions include:
-- **State Management**: React Query (TanStack Query) for server state management, providing automatic caching, background updates, and optimistic updates
-- **Routing**: Wouter for lightweight client-side routing without the complexity of React Router
-- **Styling**: Tailwind CSS with CSS custom properties for theming, using a design system approach
-- **Form Handling**: React Hook Form with Zod validation for type-safe form validation and submission
-- **File Uploads**: React Dropzone for drag-and-drop file upload functionality
-
-The application follows a multi-step form pattern for agreement creation, with progressive validation and file upload capabilities for identity verification documents.
+State management is implemented using React Query (TanStack Query) for server state management, providing caching, synchronization, and background updates. Local component state is managed through React hooks. The application follows a mobile-first responsive design approach with proper accessibility considerations built into the component library.
 
 ## Backend Architecture
+The backend follows a REST API architecture built with Express.js and TypeScript. The server implements a layered architecture with clear separation of concerns:
 
-The backend implements a REST API architecture using Express.js with TypeScript. The server follows a layered architecture pattern with clear separation of concerns:
+- **Route Layer**: Handles HTTP requests and responses, input validation using Zod schemas
+- **Service Layer**: Contains business logic for email sending, PDF generation, and Firebase integration
+- **Storage Layer**: Abstracts data persistence with an interface-based approach, currently implementing in-memory storage for development
 
-- **Route Layer**: Handles HTTP requests/responses, input validation using Zod schemas, and file upload processing with Multer
-- **Service Layer**: Contains business logic for email delivery (SendGrid), PDF generation (PDFKit), and Firebase authentication services
-- **Storage Layer**: Database abstraction layer with MongoDB implementation using native driver
-- **Middleware**: Centralized error handling, request logging, and CORS configuration
-
-The API supports multipart form data for file uploads with proper validation for file types (images and PDFs) and size limits. Session management is implemented for user state persistence.
+The API supports file uploads using Multer for handling ID proof documents, with proper file size limits and type validation. Error handling is centralized through Express middleware for consistent error responses.
 
 ## Data Storage Solutions
+The application uses a hybrid storage approach designed for scalability:
 
-The application uses MongoDB as the primary database with a document-based schema design:
+- **Database**: PostgreSQL with Drizzle ORM for type-safe database operations and migrations
+- **Development Storage**: In-memory storage implementation for rapid development and testing
+- **File Storage**: Local file system for development, designed to be easily migrated to cloud storage solutions
 
-- **Collections**: Users, agreements, OTP verifications, and counters for atomic sequence generation
-- **Indexing Strategy**: Optimized indexes for agreement lookups by number, email searches, and TTL indexes for OTP expiration
-- **File Storage**: Local filesystem for development with structured upload directory organization
-- **Database Connection**: Connection pooling and error handling with automatic reconnection
-
-The schema design accommodates both tenant and landlord information within agreement documents, with separate verification status tracking and PDF URL storage for generated documents.
+The schema includes tables for users, rental agreements, and OTP verifications with proper relationships and constraints. Database migrations are managed through Drizzle Kit for version control and deployment consistency.
 
 ## Authentication and Authorization
+The system implements a multi-layered verification approach:
 
-The system implements a multi-layer verification approach combining several authentication mechanisms:
+- **OTP Verification**: Both email and SMS-based verification using Firebase services for secure contact verification
+- **Document Verification**: ID proof upload and validation for both tenants and landlords
+- **Agreement Verification**: Unique agreement IDs and PDF-based verification for document authenticity
 
-- **OTP Verification**: Dual-channel verification using both email and SMS through Firebase services
-- **Document Verification**: Identity proof upload and validation for both parties
-- **Agreement Verification**: Unique agreement number generation with year-based sequencing
-- **Session Management**: Server-side session storage for user state persistence
+Session management is implemented using connect-pg-simple for PostgreSQL-backed sessions, providing secure user state persistence across requests.
 
-The verification process ensures both parties complete identity verification before agreement activation, with separate verification status tracking for tenants and landlords.
+## External Dependencies
 
-# External Dependencies
+### Email Services
+- **SendGrid**: Primary email service for sending OTP codes and agreement notifications
+- **Fallback**: Console logging for development when SendGrid API keys are not configured
 
-## Database Services
-- **MongoDB Atlas**: Primary database for production deployment with connection string configuration
-- **Local Development**: In-memory fallback for development environments
+### Firebase Services
+- **Firebase Auth**: Phone number verification and email OTP services
+- **Development Mode**: Mock OTP generation for development environments
 
-## Email Services
-- **SendGrid**: Primary email service for OTP delivery and agreement notifications with API key authentication
-- **Development Fallback**: Console logging when SendGrid credentials are not configured
+### PDF Processing
+- **PDFKit**: Server-side PDF generation for rental agreements with custom formatting and layout
+- **Document Templates**: Structured agreement templates with tenant, landlord, and property information
 
-## Firebase Services
-- **Firebase Authentication**: Phone number verification and email OTP services for multi-factor authentication
-- **Configuration**: Environment-based Firebase project configuration with API keys
+### UI Component Libraries
+- **Radix UI**: Accessible component primitives for complex UI interactions
+- **Tailwind CSS**: Utility-first CSS framework for consistent styling
+- **React Hook Form**: Form state management with Zod validation integration
+- **React Dropzone**: File upload handling with drag-and-drop support
 
-## File Processing
-- **PDFKit**: Server-side PDF generation for rental agreements with custom formatting and styling
-- **Multer**: File upload handling with configurable storage destinations and file type validation
-
-## UI Component Libraries
-- **Radix UI**: Accessible component primitives for dropdown menus, dialogs, and form controls
-- **shadcn/ui**: Pre-built component library with consistent design system
-- **Lucide React**: Icon library for consistent iconography throughout the application
+### Development Tools
+- **Vite**: Development server and build tool with React plugin
+- **Replit Integration**: Development environment plugins for cartographer and dev banner
+- **TypeScript**: Type safety across frontend and backend with shared schema definitions
