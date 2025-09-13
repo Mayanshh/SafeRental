@@ -1,6 +1,6 @@
 # Overview
 
-SafeRentalVerify is a comprehensive web application for creating, managing, and verifying legally compliant rental agreements. The platform facilitates secure transactions between tenants and landlords by providing built-in verification features, document generation, and multi-layer authentication. The system allows tenants to create rental agreements through a step-by-step form process, while landlords can verify and approve these agreements through OTP-based verification systems.
+SafeRental is a comprehensive web application for creating, managing, and verifying legally compliant rental agreements. The platform facilitates secure transactions between tenants and landlords by providing built-in verification features, document generation, and multi-layer authentication. The system allows tenants to create rental agreements through a step-by-step form process, while landlords can verify and approve these agreements through OTP-based verification systems.
 
 # User Preferences
 

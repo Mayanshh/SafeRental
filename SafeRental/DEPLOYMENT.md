@@ -34,7 +34,7 @@ git push -u origin main
    - **Name:** `saferental-app`
    - **Region:** Choose closest to your users
    - **Branch:** `main`
-   - **Root Directory:** Leave empty
+   - **Root Directory:** SafeRental
    - **Runtime:** `Node`
    - **Build Command:** `npm install && npm run build`
    - **Start Command:** `npm start`
@@ -82,7 +82,7 @@ npm run check
 ## File Structure for Production
 
 ```
-SafeRentalVerify/
+SafeRental/
 ├── client/           # React frontend source
 ├── server/          # Express backend source
 ├── shared/          # Shared types and schemas

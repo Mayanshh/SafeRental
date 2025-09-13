@@ -34,7 +34,7 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd SafeRentalVerify && npm run dev"
+args = "cd SafeRental && npm run dev"
 waitForPort = 5000
 
 [workflows.workflow.metadata]
