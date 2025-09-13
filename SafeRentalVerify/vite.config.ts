@@ -6,7 +6,7 @@ import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 export default defineConfig({
   plugins: [
     react(),
-    runtimeErrorOverlay(),
+    ...(process.env.NODE_ENV !== "production" ? [runtimeErrorOverlay()] : []),
     ...(process.env.NODE_ENV !== "production" &&
     process.env.REPL_ID !== undefined
       ? [
@@ -32,6 +32,8 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
+    host: "0.0.0.0",
+    port: 5000,
     fs: {
       strict: true,
       deny: ["**/.*"],
