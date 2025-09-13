@@ -38,18 +38,20 @@ export class EmailService {
         return true;
       }
 
-      const msg = {
+      const msg: any = {
         to: params.to,
         from: params.from || this.fromEmail,
         subject: params.subject,
-        text: params.text,
-        html: params.html,
-        attachments: params.attachments?.map(att => ({
-          filename: att.filename,
-          content: att.content.toString('base64'),
-          type: att.type,
-          disposition: 'attachment' as const,
-        })),
+        ...(params.text && { text: params.text }),
+        ...(params.html && { html: params.html }),
+        ...(params.attachments && params.attachments.length > 0 && {
+          attachments: params.attachments.map(att => ({
+            filename: att.filename,
+            content: att.content.toString('base64'),
+            type: att.type,
+            disposition: 'attachment' as const,
+          })),
+        }),
       };
 
       await sgMail.send(msg);
