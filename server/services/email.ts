@@ -14,13 +14,14 @@ interface EmailParams {
 }
 
 export class EmailService {
-  private fromEmail = process.env.FROM_EMAIL || 'noreply@saferental.com';
+  private fromEmail = process.env.FROM_EMAIL ||  'noreply@saferental.com';
 
   constructor() {
     // Initialize SendGrid with API key
     const apiKey = process.env.SENDGRID_API_KEY;
     if (apiKey) {
       sgMail.setApiKey(apiKey);
+      console.log(apiKey);
     }
   }
 
