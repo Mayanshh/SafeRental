@@ -1,6 +1,5 @@
 // server/index.ts
 import express2 from "express";
-import 'dotenv/config';
 // server/routes.ts
 import { createServer } from "http";
 
