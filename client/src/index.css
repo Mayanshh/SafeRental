@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  :root {
+    --primary: 0 0% 9%; /* Deep Onyx */
+    --accent: 220 100% 50%; /* Electric Blue */
+    --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
+  }
+}
+
 :root {
   --background: hsl(210, 40%, 98%);
   --foreground: hsl(220, 9%, 12%);

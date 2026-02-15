@@ -7,12 +7,24 @@ import { FileUpload } from "@/components/file-upload";
 import { Hash, FileText, CheckCircle, XCircle, Home, Search, ShieldCheck, ArrowRight } from "lucide-react";
 import { Link } from "wouter";
 
+// 1. Define the expected shape of your API response
+interface VerificationResponse {
+  verified: boolean;
+  agreement: {
+    agreementNumber: string;
+    createdAt: string | Date;
+    propertyAddress: string;
+    monthlyRent: number | string;
+  };
+}
+
 export default function Verification() {
   const [agreementId, setAgreementId] = useState("");
   const [shouldFetch, setShouldFetch] = useState(false);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
 
-  const { data: verificationResult, isLoading, error } = useQuery({
+  // 2. Pass the interface to useQuery so TypeScript knows the structure of 'verificationResult'
+  const { data: verificationResult, isLoading, error } = useQuery<VerificationResponse>({
     queryKey: ['/api/agreements/verify', agreementId],
     enabled: shouldFetch && !!agreementId,
   });
