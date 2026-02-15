@@ -2,25 +2,34 @@ import PDFDocument from 'pdfkit';
 import { Agreement } from '@shared/schema';
 
 export class PdfGeneratorService {
-  generateAgreementPdf(agreement: Agreement): Promise<Buffer> {
+  /**
+   * Generates a PDF Buffer for a given Rental Agreement
+   */
+  async generateAgreementPdf(agreement: Agreement): Promise<Buffer> {
     return new Promise((resolve, reject) => {
       try {
-        const doc = new PDFDocument({ margin: 50 });
+        // 1. Initialize Document
+        const doc = new PDFDocument({ 
+          margin: 50, 
+          size: 'A4',
+          bufferPages: true 
+        });
         const chunks: Buffer[] = [];
 
+        // 2. Stream Handling
         doc.on('data', (chunk) => chunks.push(chunk));
         doc.on('end', () => resolve(Buffer.concat(chunks)));
-        doc.on('error', reject);
+        doc.on('error', (err) => reject(err));
+
+        // --- PDF CONTENT START ---
 
         // Header
         doc.fontSize(20).font('Helvetica-Bold').text('RENTAL AGREEMENT', { align: 'center' });
-        doc.fontSize(12).font('Helvetica').text(`Agreement Number: ${agreement.agreementNumber}`, { align: 'center' });
+        doc.fontSize(10).font('Helvetica').text(`Agreement Number: ${agreement.agreementNumber}`, { align: 'center' });
         doc.moveDown(2);
 
-        // Agreement details
-        doc.fontSize(14).font('Helvetica-Bold').text('RENTAL AGREEMENT DETAILS');
-        doc.moveDown(0.5);
-        
+        // Section: Agreement Details
+        this.renderSectionHeader(doc, 'RENTAL AGREEMENT DETAILS');
         doc.fontSize(12).font('Helvetica');
         doc.text(`Property Address: ${agreement.propertyAddress}`);
         doc.text(`Monthly Rent: $${agreement.monthlyRent}`);
@@ -28,38 +37,32 @@ export class PdfGeneratorService {
           doc.text(`Security Deposit: $${agreement.securityDeposit}`);
         }
         doc.text(`Lease Duration: ${agreement.leaseDuration}`);
-        doc.text(`Lease Start Date: ${agreement.leaseStartDate}`);
-        doc.text(`Lease End Date: ${agreement.leaseEndDate}`);
-        doc.moveDown(1);
+        doc.text(`Lease Start Date: ${this.formatDate(agreement.leaseStartDate)}`);
+        doc.text(`Lease End Date: ${this.formatDate(agreement.leaseEndDate)}`);
+        doc.moveDown(1.5);
 
-        // Tenant information
-        doc.fontSize(14).font('Helvetica-Bold').text('TENANT INFORMATION');
-        doc.moveDown(0.5);
-        
+        // Section: Tenant Information
+        this.renderSectionHeader(doc, 'TENANT INFORMATION');
         doc.fontSize(12).font('Helvetica');
         doc.text(`Full Name: ${agreement.tenantFullName}`);
         doc.text(`Email: ${agreement.tenantEmail}`);
         doc.text(`Phone: ${agreement.tenantPhone}`);
-        doc.text(`Date of Birth: ${agreement.tenantDob}`);
-        doc.text(`Address: ${agreement.tenantAddress}`);
-        doc.moveDown(1);
+        doc.text(`Date of Birth: ${this.formatDate(agreement.tenantDob)}`);
+        doc.text(`Current Address: ${agreement.tenantAddress}`);
+        doc.moveDown(1.5);
 
-        // Landlord information
-        doc.fontSize(14).font('Helvetica-Bold').text('LANDLORD INFORMATION');
-        doc.moveDown(0.5);
-        
+        // Section: Landlord Information
+        this.renderSectionHeader(doc, 'LANDLORD INFORMATION');
         doc.fontSize(12).font('Helvetica');
         doc.text(`Full Name: ${agreement.landlordFullName}`);
         doc.text(`Email: ${agreement.landlordEmail}`);
         doc.text(`Phone: ${agreement.landlordPhone}`);
         doc.text(`Address: ${agreement.landlordAddress}`);
-        doc.moveDown(2);
+        doc.moveDown(1.5);
 
-        // Terms and conditions
-        doc.fontSize(14).font('Helvetica-Bold').text('TERMS AND CONDITIONS');
-        doc.moveDown(0.5);
-        
-        doc.fontSize(11).font('Helvetica');
+        // Section: Terms and Conditions
+        this.renderSectionHeader(doc, 'TERMS AND CONDITIONS');
+        doc.fontSize(10).font('Helvetica');
         const terms = [
           '1. The tenant agrees to pay rent on or before the first day of each month.',
           '2. The security deposit will be returned within 30 days of lease termination, subject to property condition.',
@@ -72,38 +75,58 @@ export class PdfGeneratorService {
         ];
 
         terms.forEach(term => {
-          doc.text(term, { indent: 20 });
-          doc.moveDown(0.3);
+          doc.text(term, { indent: 15 });
+          doc.moveDown(0.4);
         });
+        doc.moveDown(1.5);
 
-        doc.moveDown(2);
+        // Section: Signatures (With Page-Break Logic)
+        // If we are near the bottom of the page (e.g., 200 units left), start a new page
+        if (doc.y > 600) doc.addPage();
 
-        // Signatures
-        doc.fontSize(14).font('Helvetica-Bold').text('SIGNATURES');
-        doc.moveDown(1);
-        
+        this.renderSectionHeader(doc, 'SIGNATURES');
         doc.fontSize(12).font('Helvetica');
+        doc.moveDown(1);
+
+        // Tenant Signature Row
         doc.text('Tenant Signature: _________________________', { continued: true });
         doc.text('Date: ___________', { align: 'right' });
         doc.moveDown(0.5);
         doc.text(`Print Name: ${agreement.tenantFullName}`);
-        doc.moveDown(1.5);
-        
+        doc.moveDown(2);
+
+        // Landlord Signature Row
         doc.text('Landlord Signature: _________________________', { continued: true });
         doc.text('Date: ___________', { align: 'right' });
         doc.moveDown(0.5);
         doc.text(`Print Name: ${agreement.landlordFullName}`);
-        doc.moveDown(2);
 
-        // Footer
-        doc.fontSize(10).font('Helvetica').text('This document was generated by SafeRental platform and is legally binding when signed by both parties.', { align: 'center' });
-        doc.text(`Generated on: ${new Date().toLocaleDateString()}`, { align: 'center' });
+        // Footer (Fixed at bottom)
+        const bottom = doc.page.height - 70;
+        doc.fontSize(9)
+           .fillColor('grey')
+           .text('This document was generated by SafeRental platform and is legally binding when signed.', 50, bottom, { align: 'center' })
+           .text(`Generated on: ${new Date().toLocaleDateString()}`, { align: 'center' });
 
+        // --- PDF CONTENT END ---
         doc.end();
       } catch (error) {
         reject(error);
       }
     });
+  }
+
+  // Helper to keep formatting consistent
+  private renderSectionHeader(doc: PDFKit.PDFDocument, title: string) {
+    doc.fontSize(13).font('Helvetica-Bold').fillColor('black').text(title);
+    doc.moveDown(0.5);
+  }
+
+  // Helper to handle date strings/objects safely
+  private formatDate(dateInput: any): string {
+    if (!dateInput) return 'N/A';
+    const date = new Date(dateInput);
+    return isNaN(date.getTime()) ? dateInput : date.toLocaleDateString();
   }
 }
 

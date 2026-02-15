@@ -1,5 +1,7 @@
 // server/index.ts
+import dotenv from "dotenv";
 import express2 from "express";
+
 // server/routes.ts
 import { createServer } from "http";
 
@@ -454,6 +456,7 @@ var EmailService = class {
     const apiKey = process.env.SENDGRID_API_KEY;
     if (apiKey) {
       sgMail.setApiKey(apiKey);
+      console.log(apiKey);
     }
   }
   async sendEmail(params) {
@@ -825,43 +828,24 @@ import { createServer as createViteServer, createLogger } from "vite";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path2 from "path";
-var vite_config_default = defineConfig(async () => {
-  const plugins = [react()];
-  if (process.env.NODE_ENV !== "production" && process.env.REPL_ID !== void 0) {
-    try {
-      const runtimeErrorOverlay = await import("@replit/vite-plugin-runtime-error-modal");
-      const cartographer = await import("@replit/vite-plugin-cartographer");
-      const devBanner = await import("@replit/vite-plugin-dev-banner");
-      if (runtimeErrorOverlay.default) plugins.push(runtimeErrorOverlay.default());
-      if (cartographer.cartographer) plugins.push(cartographer.cartographer());
-      if (devBanner.devBanner) plugins.push(devBanner.devBanner());
-    } catch (error) {
-      console.log("Development plugins not available, continuing...");
+var vite_config_default = defineConfig({
+  plugins: [react()],
+  resolve: {
+    alias: {
+      "@": path2.resolve("./client/src"),
+      "@shared": path2.resolve("./shared"),
+      "@assets": path2.resolve("./attached_assets")
     }
+  },
+  root: "./client",
+  build: {
+    outDir: "../dist/public",
+    emptyOutDir: true
+  },
+  server: {
+    host: "0.0.0.0",
+    port: 5e3
   }
-  return {
-    plugins,
-    resolve: {
-      alias: {
-        "@": path2.resolve(import.meta.dirname, "client", "src"),
-        "@shared": path2.resolve(import.meta.dirname, "shared"),
-        "@assets": path2.resolve(import.meta.dirname, "attached_assets")
-      }
-    },
-    root: path2.resolve(import.meta.dirname, "client"),
-    build: {
-      outDir: path2.resolve(import.meta.dirname, "dist/public"),
-      emptyOutDir: true
-    },
-    server: {
-      host: "0.0.0.0",
-      port: 5e3,
-      fs: {
-        strict: true,
-        deny: ["**/.*"]
-      }
-    }
-  };
 });
 
 // server/vite.ts
@@ -932,6 +916,7 @@ function serveStatic(app2) {
 }
 
 // server/index.ts
+dotenv.config();
 var app = express2();
 app.use(express2.json());
 app.use(express2.urlencoded({ extended: false }));

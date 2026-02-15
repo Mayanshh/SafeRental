@@ -1,8 +1,11 @@
-import sgMail from '@sendgrid/mail';
+import nodemailer from 'nodemailer';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 interface EmailParams {
   to: string;
-  from: string;
+  from?: string; // Optional because we have a default
   subject: string;
   text?: string;
   html?: string;
@@ -14,73 +17,86 @@ interface EmailParams {
 }
 
 export class EmailService {
-  private fromEmail = process.env.FROM_EMAIL ||  'noreply@saferental.com';
+  // Use the email verified in your SMTP settings
+  private fromEmail = process.env.FROM_EMAIL || 'noreply@saferental.com';
+  private transporter: nodemailer.Transporter | null = null;
 
   constructor() {
-    // Initialize SendGrid with API key
-    const apiKey = process.env.SENDGRID_API_KEY;
-    if (apiKey) {
-      sgMail.setApiKey(apiKey);
-      console.log(apiKey);
+    const smtpHost = process.env.SMTP_HOST;
+    const smtpUser = process.env.SMTP_USER;
+    const smtpPass = process.env.SMTP_PASS;
+
+    if (smtpHost && smtpUser && smtpPass) {
+      this.transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: parseInt(process.env.SMTP_PORT || '587'),
+        secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
+        auth: {
+          user: smtpUser,
+          pass: smtpPass,
+        },
+      });
+    } else {
+      console.warn('⚠️ SMTP Credentials are missing from environment variables.');
     }
   }
 
   async sendEmail(params: EmailParams): Promise<boolean> {
     try {
-      const apiKey = process.env.SENDGRID_API_KEY;
-      
-      if (!apiKey) {
-        console.log('SendGrid API key not found, simulating email send:', {
+      // Fallback for development if no Transporter exists
+      if (!this.transporter) {
+        console.log('🛠️ SIMULATION: Email would be sent:', {
           to: params.to,
-          from: params.from || this.fromEmail,
           subject: params.subject,
-          hasAttachment: !!params.attachments?.length,
+          attachments: params.attachments?.map(a => a.filename)
         });
         return true;
       }
 
-      const msg: any = {
+      const mailOptions = {
         to: params.to,
         from: params.from || this.fromEmail,
         subject: params.subject,
-        ...(params.text && { text: params.text }),
-        ...(params.html && { html: params.html }),
-        ...(params.attachments && params.attachments.length > 0 && {
-          attachments: params.attachments.map(att => ({
-            filename: att.filename,
-            content: att.content.toString('base64'),
-            type: att.type,
-            disposition: 'attachment' as const,
-          })),
-        }),
+        text: params.text || '',
+        html: params.html || '',
+        // Nodemailer handles Buffers natively, simpler than SendGrid
+        attachments: params.attachments?.map(att => ({
+          filename: att.filename,
+          content: att.content, // Nodemailer accepts Buffer directly
+          contentType: att.type,
+          disposition: 'attachment',
+        })),
       };
 
-      await sgMail.send(msg);
-      console.log(`Email sent successfully to ${params.to}`);
+      await this.transporter.sendMail(mailOptions);
+      console.log(`✅ Email sent successfully to ${params.to}`);
       return true;
-    } catch (error) {
-      console.error('Email sending error:', error);
+    } catch (error: any) {
+      console.error('❌ Email Sending Error:');
+      if (error.response) {
+        console.error(error.response);
+      } else {
+        console.error(error.message);
+      }
       return false;
     }
   }
 
   async sendOtpEmail(email: string, otp: string): Promise<boolean> {
     const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #3b82f6;">SafeRental - Email Verification</h2>
+      <div style="font-family: sans-serif; max-width: 600px; border: 1px solid #eee; padding: 20px;">
+        <h2 style="color: #3b82f6;">SafeRental Verification</h2>
         <p>Your verification code is:</p>
-        <div style="background: #f3f4f6; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #1f2937;">
+        <div style="background: #f4f4f4; padding: 15px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px;">
           ${otp}
         </div>
-        <p>This code will expire in 10 minutes.</p>
-        <p>If you didn't request this verification, please ignore this email.</p>
+        <p>This code expires in 10 minutes.</p>
       </div>
     `;
 
     return this.sendEmail({
       to: email,
-      from: this.fromEmail,
-      subject: 'SafeRental - Email Verification Code',
+      subject: 'SafeRental Verification Code',
       html,
     });
   }
@@ -92,41 +108,24 @@ export class EmailService {
     pdfBuffer: Buffer
   ): Promise<boolean> {
     const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #3b82f6;">SafeRental - Your Rental Agreement</h2>
-        <p>Your rental agreement has been successfully generated and verified.</p>
-        <p><strong>Agreement Number:</strong> ${agreementNumber}</p>
-        <p>Please find your rental agreement attached to this email.</p>
-        <p>Keep this document safe as it serves as your legal rental agreement.</p>
-        <p>Thank you for using SafeRental!</p>
+      <div style="font-family: sans-serif; padding: 20px;">
+        <h2>Your Rental Agreement</h2>
+        <p>Agreement <strong>${agreementNumber}</strong> is ready and attached.</p>
       </div>
     `;
 
-    const tenantSuccess = await this.sendEmail({
-      to: tenantEmail,
-      from: this.fromEmail,
-      subject: `SafeRental - Rental Agreement ${agreementNumber}`,
-      html,
-      attachments: [{
-        filename: `rental-agreement-${agreementNumber}.pdf`,
-        content: pdfBuffer,
-        type: 'application/pdf',
-      }],
-    });
+    const attachment = {
+      filename: `agreement-${agreementNumber}.pdf`,
+      content: pdfBuffer,
+      type: 'application/pdf',
+    };
 
-    const landlordSuccess = await this.sendEmail({
-      to: landlordEmail,
-      from: this.fromEmail,
-      subject: `SafeRental - Rental Agreement ${agreementNumber}`,
-      html,
-      attachments: [{
-        filename: `rental-agreement-${agreementNumber}.pdf`,
-        content: pdfBuffer,
-        type: 'application/pdf',
-      }],
-    });
+    // Send to both parties
+    const tenantTask = this.sendEmail({ to: tenantEmail, subject: 'Your Agreement', html, attachments: [attachment] });
+    const landlordTask = this.sendEmail({ to: landlordEmail, subject: 'Your Agreement', html, attachments: [attachment] });
 
-    return tenantSuccess && landlordSuccess;
+    const results = await Promise.all([tenantTask, landlordTask]);
+    return results.every(res => res === true);
   }
 }
 
