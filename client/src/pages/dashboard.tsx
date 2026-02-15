@@ -6,10 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Download, FileText, Clock, Archive, Home, Search, Plus, Eye } from "lucide-react";
+import { Download, FileText, Clock, Archive, Home, Search, Plus, Eye, ArrowUpRight } from "lucide-react";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import type { Agreement } from "@shared/schema";
+import { cn } from "@/lib/utils";
 
 export default function Dashboard() {
   const [searchEmail, setSearchEmail] = useState("");
@@ -23,53 +24,32 @@ export default function Dashboard() {
   });
 
   const handleSearch = () => {
-    if (searchEmail.trim()) {
-      setShouldFetch(true);
-    }
+    if (searchEmail.trim()) setShouldFetch(true);
   };
 
-  // Handlers for button actions
-  const handleViewAgreement = (agreement: Agreement) => {
-    setViewingAgreement(agreement);
-  };
-
-  const handleDownloadAgreement = async (agreement: Agreement) => {
-    try {
-      // Check if agreement is fully verified
-      if (!agreement.tenantVerified || !agreement.landlordVerified) {
-        toast({
-          title: "Agreement Not Ready",
-          description: "Both tenant and landlord must verify before downloading the agreement.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Show message that PDF was emailed
+  const handleDownloadAgreement = (agreement: Agreement) => {
+    if (!agreement.tenantVerified || !agreement.landlordVerified) {
       toast({
-        title: "PDF Agreement",
-        description: `The rental agreement PDF was emailed to both parties when verification was completed for agreement ${agreement.agreementNumber}.`,
-      });
-      
-      // Note: In a production app, you might want to add a backend endpoint 
-      // to regenerate and download the PDF directly
-    } catch (error) {
-      toast({
-        title: "Download Failed",
-        description: "Failed to process download request. Please try again.",
+        title: "Agreement Not Ready",
+        description: "Verification pending for one or both parties.",
         variant: "destructive",
       });
+      return;
     }
+    toast({
+      title: "PDF Agreement",
+      description: `Sent to authorized emails for ID: ${agreement.agreementNumber}`,
+    });
   };
 
   const getStatusBadge = (agreement: Agreement) => {
     if (!agreement.tenantVerified || !agreement.landlordVerified) {
-      return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Pending</Badge>;
+      return <Badge variant="outline" className="border-yellow-500 text-yellow-600 rounded-none font-mono text-[10px]">PENDING_AUTH</Badge>;
     }
     if (agreement.isActive) {
-      return <Badge variant="default" className="bg-green-100 text-green-800">Active</Badge>;
+      return <Badge variant="outline" className="border-emerald-500 text-emerald-600 rounded-none font-mono text-[10px]">ACTIVE_LEASE</Badge>;
     }
-    return <Badge variant="outline" className="bg-gray-100 text-gray-800">Expired</Badge>;
+    return <Badge variant="outline" className="border-slate-300 text-slate-400 rounded-none font-mono text-[10px]">ARCHIVED</Badge>;
   };
 
   const activeAgreements = agreements.filter(a => a.isActive && a.tenantVerified && a.landlordVerified);
@@ -77,348 +57,204 @@ export default function Dashboard() {
   const expiredAgreements = agreements.filter(a => !a.isActive);
 
   const AgreementCard = ({ agreement }: { agreement: Agreement }) => (
-    <Card key={agreement.id} className="hover:shadow-md transition-shadow" data-testid={`agreement-card-${agreement.id}`}>
-      <CardContent className="pt-6">
-        <div className="flex items-center justify-between mb-4">
-          {getStatusBadge(agreement)}
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => handleDownloadAgreement(agreement)}
-            data-testid={`button-download-${agreement.id}`}
-            title="Download Agreement PDF"
-          >
-            <Download className="h-4 w-4" />
-          </Button>
-        </div>
-        
-        <h3 className="font-semibold mb-2 line-clamp-2" data-testid={`agreement-address-${agreement.id}`}>
+    <div 
+      key={agreement.id} 
+      className="group border border-slate-200 bg-white hover:border-slate-950 transition-all p-0 flex flex-col"
+      data-testid={`agreement-card-${agreement.id}`}
+    >
+      <div className="p-6 border-b border-slate-100 flex justify-between items-start">
+        {getStatusBadge(agreement)}
+        <span className="font-mono text-[10px] text-slate-400 uppercase tracking-tighter">ID: {agreement.agreementNumber}</span>
+      </div>
+      
+      <div className="p-8 flex-1">
+        <h3 className="text-2xl font-bold uppercase tracking-tighter mb-6 leading-tight group-hover:text-primary transition-colors">
           {agreement.propertyAddress}
         </h3>
         
-        <div className="space-y-2 text-sm text-muted-foreground">
-          <div className="flex justify-between">
-            <span>Agreement ID:</span>
-            <span data-testid={`agreement-number-${agreement.id}`}>{agreement.agreementNumber}</span>
+        <div className="space-y-3 font-mono text-[11px] uppercase tracking-wider text-slate-500">
+          <div className="flex justify-between border-b border-slate-50 pb-2">
+            <span>Rent</span>
+            <span className="text-slate-950 font-bold">${agreement.monthlyRent}</span>
           </div>
-          <div className="flex justify-between">
-            <span>Monthly Rent:</span>
-            <span data-testid={`agreement-rent-${agreement.id}`}>${agreement.monthlyRent}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Start Date:</span>
-            <span data-testid={`agreement-start-${agreement.id}`}>
-              {new Date(agreement.leaseStartDate).toLocaleDateString()}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span>Duration:</span>
-            <span data-testid={`agreement-duration-${agreement.id}`}>{agreement.leaseDuration}</span>
+          <div className="flex justify-between border-b border-slate-50 pb-2">
+            <span>Lease Start</span>
+            <span className="text-slate-950">{new Date(agreement.leaseStartDate).toLocaleDateString()}</span>
           </div>
         </div>
-        
-        <div className="mt-4 pt-4 border-t border-border">
-          <Button 
-            className="w-full" 
-            size="sm"
-            onClick={() => handleViewAgreement(agreement)}
-            disabled={!agreement.tenantVerified || !agreement.landlordVerified}
-            data-testid={`button-view-${agreement.id}`}
-          >
-            <Eye className="mr-2 h-4 w-4" />
-            {agreement.tenantVerified && agreement.landlordVerified ? 'View Agreement' : 'Complete Verification'}
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+      </div>
+      
+      <div className="grid grid-cols-2 border-t border-slate-200">
+        <button 
+          onClick={() => setViewingAgreement(agreement)}
+          className="py-4 text-[10px] font-bold uppercase tracking-[0.2em] border-r border-slate-200 hover:bg-slate-950 hover:text-white transition-all flex items-center justify-center gap-2"
+        >
+          <Eye size={14} /> Details
+        </button>
+        <button 
+          onClick={() => handleDownloadAgreement(agreement)}
+          className="py-4 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-primary hover:text-white transition-all flex items-center justify-center gap-2"
+        >
+          <Download size={14} /> PDF
+        </button>
+      </div>
+    </div>
   );
 
-  const renderAgreementGrid = (agreements: Agreement[]) => {
-    if (agreements.length === 0) {
-      return (
-        <div className="text-center py-12">
-          <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium mb-2">No agreements found</h3>
-          <p className="text-muted-foreground mb-6">
-            Create your first rental agreement to get started.
-          </p>
-          <Link href="/agreement-form">
-            <Button data-testid="button-create-first">
-              <Plus className="mr-2 h-4 w-4" />
-              Create Agreement
-            </Button>
-          </Link>
-        </div>
-      );
-    }
-
-    return (
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6" data-testid="agreement-grid">
-        {agreements.map((agreement) => (
-          <AgreementCard key={agreement.id} agreement={agreement} />
-        ))}
-      </div>
-    );
-  };
-
   return (
-    <div className="min-h-screen bg-background py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">My Agreements</h1>
-          <p className="text-muted-foreground">Manage and view your rental agreements</p>
+    <div className="min-h-screen bg-[#fafafa] text-slate-950 selection:bg-primary selection:text-white">
+      {/* Editorial Header */}
+      <header className="border-b border-slate-200 bg-white pt-24 pb-16 px-6">
+        <div className="max-w-[1400px] mx-auto">
+          <span className="font-mono text-xs uppercase tracking-[0.4em] text-primary mb-6 block">/ User Dashboard</span>
+          <h1 className="text-6xl md:text-8xl font-bold uppercase tracking-tighter leading-[0.85]">
+            My <span className="text-slate-300 italic">Agreements</span>
+          </h1>
         </div>
+      </header>
 
-        {/* Search Section */}
-        <Card className="mb-8" data-testid="search-card">
-          <CardHeader>
-            <CardTitle>Find Your Agreements</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex space-x-4">
+      <main className="max-w-[1400px] mx-auto px-6 py-12">
+        {/* Search - Studio Style */}
+        <div className="mb-20 grid lg:grid-cols-12 gap-12 items-end">
+          <div className="lg:col-span-8">
+            <label className="font-mono text-[10px] uppercase tracking-[0.3em] text-slate-400 mb-4 block">Archive Search</label>
+            <div className="relative group">
               <Input
-                placeholder="Enter your email address"
+                placeholder="EMAIL_ADDRESS@DOMAIN.COM"
                 value={searchEmail}
                 onChange={(e) => setSearchEmail(e.target.value)}
-                className="flex-1"
-                data-testid="input-search-email"
+                className="h-20 rounded-none border-0 border-b-2 border-slate-200 bg-transparent text-3xl md:text-4xl font-bold tracking-tighter placeholder:text-slate-100 focus-visible:ring-0 focus-visible:border-primary transition-all px-0"
               />
-              <Button 
-                onClick={handleSearch}
-                disabled={!searchEmail.trim() || isLoading}
-                data-testid="button-search"
-              >
-                <Search className="mr-2 h-4 w-4" />
-                {isLoading ? 'Searching...' : 'Search'}
+              <div className="absolute right-0 bottom-4">
+                <Button 
+                  onClick={handleSearch}
+                  size="lg"
+                  className="h-12 w-12 rounded-none bg-slate-950"
+                  disabled={!searchEmail.trim() || isLoading}
+                >
+                  <Search size={20} />
+                </Button>
+              </div>
+            </div>
+          </div>
+          <div className="lg:col-span-4 flex justify-end">
+            <Link href="/agreement-form">
+              <Button variant="outline" size="lg" className="h-20 w-full lg:w-auto px-12 rounded-none border-slate-950 uppercase tracking-widest font-bold text-xs hover:bg-slate-950 hover:text-white">
+                <Plus className="mr-4 h-4 w-4" /> Create New Record
               </Button>
-            </div>
-            <p className="text-sm text-muted-foreground mt-2">
-              Enter the email address used when creating or receiving the agreement
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Results */}
-        {shouldFetch && (
-          <div>
-            {agreements.length > 0 && (
-              <Tabs defaultValue="active" className="space-y-6">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="active" data-testid="tab-active">
-                    Active ({activeAgreements.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="pending" data-testid="tab-pending">
-                    Pending ({pendingAgreements.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="expired" data-testid="tab-expired">
-                    Expired ({expiredAgreements.length})
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="active" data-testid="tab-content-active">
-                  {renderAgreementGrid(activeAgreements)}
-                </TabsContent>
-
-                <TabsContent value="pending" data-testid="tab-content-pending">
-                  {renderAgreementGrid(pendingAgreements)}
-                </TabsContent>
-
-                <TabsContent value="expired" data-testid="tab-content-expired">
-                  {renderAgreementGrid(expiredAgreements)}
-                </TabsContent>
-              </Tabs>
-            )}
-
-            {agreements.length === 0 && !isLoading && (
-              <div className="text-center py-12">
-                <Search className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-medium mb-2">No agreements found</h3>
-                <p className="text-muted-foreground mb-6">
-                  No rental agreements found for this email address.
-                </p>
-                <Link href="/agreement-form">
-                  <Button data-testid="button-create-new">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Create New Agreement
-                  </Button>
-                </Link>
-              </div>
-            )}
+            </Link>
           </div>
-        )}
+        </div>
 
-        {!shouldFetch && (
-          <div className="text-center py-16">
-            <Clock className="mx-auto h-16 w-16 text-muted-foreground mb-6" />
-            <h3 className="text-xl font-medium mb-4">Ready to find your agreements?</h3>
-            <p className="text-muted-foreground max-w-md mx-auto mb-8">
-              Enter your email address above to search for rental agreements associated with your account.
-            </p>
-            <div className="space-x-4">
-              <Link href="/agreement-form">
-                <Button data-testid="button-create-welcome">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create Agreement
-                </Button>
-              </Link>
-              <Link href="/">
-                <Button variant="outline" data-testid="button-back-home">
-                  <Home className="mr-2 h-4 w-4" />
-                  Back to Home
-                </Button>
-              </Link>
-            </div>
-          </div>
-        )}
+        {shouldFetch ? (
+          <Tabs defaultValue="active" className="space-y-12">
+            <TabsList className="h-auto bg-transparent border-b border-slate-200 w-full justify-start rounded-none p-0 gap-12">
+              {['active', 'pending', 'expired'].map((tab) => (
+                <TabsTrigger 
+                  key={tab}
+                  value={tab} 
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent bg-transparent px-0 py-4 font-mono text-[11px] uppercase tracking-[0.2em] font-bold"
+                >
+                  {tab} Records ({tab === 'active' ? activeAgreements.length : tab === 'pending' ? pendingAgreements.length : expiredAgreements.length})
+                </TabsTrigger>
+              ))}
+            </TabsList>
 
-        {/* Agreement Details Modal */}
-        <Dialog open={!!viewingAgreement} onOpenChange={() => setViewingAgreement(null)}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Agreement Details - {viewingAgreement?.agreementNumber}</DialogTitle>
-            </DialogHeader>
-            
-            {viewingAgreement && (
-              <div className="space-y-6">
-                {/* Agreement Status */}
-                <div className="flex items-center justify-between">
-                  {getStatusBadge(viewingAgreement)}
-                  <Button 
-                    variant="outline"
-                    onClick={() => handleDownloadAgreement(viewingAgreement)}
-                    disabled={!viewingAgreement.tenantVerified || !viewingAgreement.landlordVerified}
-                  >
-                    <Download className="mr-2 h-4 w-4" />
-                    Download PDF
-                  </Button>
+            {['active', 'pending', 'expired'].map((status) => (
+              <TabsContent key={status} value={status}>
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-0 border-l border-t border-slate-200">
+                  {(status === 'active' ? activeAgreements : status === 'pending' ? pendingAgreements : expiredAgreements).map(agreement => (
+                    <div key={agreement.id} className="border-r border-b border-slate-200">
+                      <AgreementCard agreement={agreement} />
+                    </div>
+                  ))}
+                  {(status === 'active' ? activeAgreements : status === 'pending' ? pendingAgreements : expiredAgreements).length === 0 && (
+                    <div className="col-span-full py-32 text-center border-r border-b border-slate-200 bg-white">
+                      <Archive size={48} className="mx-auto mb-6 text-slate-100" />
+                      <p className="font-mono text-xs uppercase tracking-widest text-slate-400">No records found in this category.</p>
+                    </div>
+                  )}
                 </div>
-                
-                {/* Property Details */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Property Information</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Property Address</label>
-                        <p className="text-sm">{viewingAgreement.propertyAddress}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Monthly Rent</label>
-                        <p className="text-sm font-semibold">${viewingAgreement.monthlyRent}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Security Deposit</label>
-                        <p className="text-sm">${viewingAgreement.securityDeposit || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Lease Duration</label>
-                        <p className="text-sm">{viewingAgreement.leaseDuration}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+              </TabsContent>
+            ))}
+          </Tabs>
+        ) : (
+          <div className="py-40 text-center border-2 border-dashed border-slate-100">
+            <Clock size={64} className="mx-auto mb-8 text-slate-100" />
+            <h3 className="text-4xl font-bold uppercase tracking-tighter mb-4">Awaiting Input</h3>
+            <p className="text-slate-400 font-light max-w-sm mx-auto uppercase text-[10px] tracking-widest">
+              Please enter your authorized email address above to retrieve your encrypted rental agreements.
+            </p>
+          </div>
+        )}
+      </main>
 
-                {/* Tenant Information */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Tenant Information</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Full Name</label>
-                        <p className="text-sm">{viewingAgreement.tenantFullName}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Email</label>
-                        <p className="text-sm">{viewingAgreement.tenantEmail}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Phone</label>
-                        <p className="text-sm">{viewingAgreement.tenantPhone}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Verification Status</label>
-                        <p className="text-sm">
-                          {viewingAgreement.tenantVerified ? (
-                            <span className="text-green-600 font-medium">✓ Verified</span>
-                          ) : (
-                            <span className="text-yellow-600 font-medium">⏳ Pending</span>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Landlord Information */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Landlord Information</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Full Name</label>
-                        <p className="text-sm">{viewingAgreement.landlordFullName}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Email</label>
-                        <p className="text-sm">{viewingAgreement.landlordEmail}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Phone</label>
-                        <p className="text-sm">{viewingAgreement.landlordPhone}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Verification Status</label>
-                        <p className="text-sm">
-                          {viewingAgreement.landlordVerified ? (
-                            <span className="text-green-600 font-medium">✓ Verified</span>
-                          ) : (
-                            <span className="text-yellow-600 font-medium">⏳ Pending</span>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Lease Details */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Lease Terms</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Start Date</label>
-                        <p className="text-sm">{new Date(viewingAgreement.leaseStartDate).toLocaleDateString()}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">End Date</label>
-                        <p className="text-sm">{new Date(viewingAgreement.leaseEndDate).toLocaleDateString()}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Created</label>
-                        <p className="text-sm">{new Date(viewingAgreement.createdAt).toLocaleDateString()}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Agreement ID</label>
-                        <p className="text-sm font-mono">{viewingAgreement.agreementNumber}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+      {/* Details Dialog - Architectural Modern */}
+      <Dialog open={!!viewingAgreement} onOpenChange={() => setViewingAgreement(null)}>
+        <DialogContent className="max-w-5xl rounded-none border-slate-950 p-0 overflow-hidden bg-white max-h-[95vh]">
+          <div className="flex h-full flex-col md:flex-row">
+            {/* Sidebar / Status */}
+            <div className="md:w-1/3 bg-slate-950 text-white p-12">
+              <span className="font-mono text-[10px] uppercase tracking-[0.4em] text-primary mb-8 block">Record Metadata</span>
+              <h2 className="text-4xl font-bold uppercase tracking-tighter mb-12">
+                Lease <br />Details
+              </h2>
+              <div className="space-y-8">
+                <div>
+                  <label className="font-mono text-[9px] uppercase tracking-widest text-slate-500 block mb-2">Auth Status</label>
+                  {viewingAgreement && getStatusBadge(viewingAgreement)}
+                </div>
+                <div>
+                  <label className="font-mono text-[9px] uppercase tracking-widest text-slate-500 block mb-2">Agreement UUID</label>
+                  <p className="font-mono text-xs">{viewingAgreement?.agreementNumber}</p>
+                </div>
               </div>
-            )}
-          </DialogContent>
-        </Dialog>
-      </div>
+            </div>
+
+            {/* Content Area */}
+            <div className="md:w-2/3 p-12 overflow-y-auto">
+              <div className="grid gap-12">
+                <section>
+                  <h4 className="font-bold uppercase tracking-widest text-xs border-b border-slate-100 pb-4 mb-6">01. Premises & Financials</h4>
+                  <div className="grid grid-cols-2 gap-8 font-light italic text-slate-600">
+                    <div>
+                      <span className="block font-bold not-italic uppercase text-[10px] text-slate-950 mb-1">Address</span>
+                      {viewingAgreement?.propertyAddress}
+                    </div>
+                    <div>
+                      <span className="block font-bold not-italic uppercase text-[10px] text-slate-950 mb-1">Monthly Yield</span>
+                      ${viewingAgreement?.monthlyRent}
+                    </div>
+                  </div>
+                </section>
+
+                <section>
+                  <h4 className="font-bold uppercase tracking-widest text-xs border-b border-slate-100 pb-4 mb-6">02. Parties Involved</h4>
+                  <div className="grid grid-cols-2 gap-12">
+                    <div className="space-y-4">
+                      <span className="text-[10px] font-mono text-primary uppercase tracking-widest">[Tenant]</span>
+                      <p className="text-xl font-bold uppercase">{viewingAgreement?.tenantFullName}</p>
+                      <p className="text-xs font-mono text-slate-400">{viewingAgreement?.tenantEmail}</p>
+                    </div>
+                    <div className="space-y-4">
+                      <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest">[Landlord]</span>
+                      <p className="text-xl font-bold uppercase">{viewingAgreement?.landlordFullName}</p>
+                      <p className="text-xs font-mono text-slate-400">{viewingAgreement?.landlordEmail}</p>
+                    </div>
+                  </div>
+                </section>
+                
+                <Button 
+                  className="w-full h-16 rounded-none bg-slate-950 font-bold uppercase tracking-widest text-xs mt-8"
+                  onClick={() => viewingAgreement && handleDownloadAgreement(viewingAgreement)}
+                >
+                  Download Formal PDF Agreement
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -3,9 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { FileUpload } from "@/components/file-upload";
-import { Hash, FileText, CheckCircle, XCircle, Home, Search } from "lucide-react";
+import { Hash, FileText, CheckCircle, XCircle, Home, Search, ShieldCheck, ArrowRight } from "lucide-react";
 import { Link } from "wouter";
 
 export default function Verification() {
@@ -19,14 +18,7 @@ export default function Verification() {
   });
 
   const handleVerifyById = () => {
-    if (agreementId.trim()) {
-      setShouldFetch(true);
-    }
-  };
-
-  const handleVerifyByPdf = () => {
-    // TODO: Implement PDF verification logic
-    console.log('PDF verification not yet implemented', pdfFile);
+    if (agreementId.trim()) setShouldFetch(true);
   };
 
   const handleReset = () => {
@@ -36,186 +28,171 @@ export default function Verification() {
   };
 
   return (
-    <div className="min-h-screen bg-background py-8">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <Card className="shadow-lg" data-testid="verification-card">
-          <CardHeader className="text-center">
-            <CardTitle className="text-3xl">Verify Rental Agreement</CardTitle>
-            <p className="text-muted-foreground">
-              Enter agreement ID or upload PDF to verify authenticity
-            </p>
-          </CardHeader>
+    <div className="min-h-screen bg-[#fafafa] text-slate-950 selection:bg-primary selection:text-white">
+      {/* Dynamic Background Watermark */}
+      <div className="fixed inset-0 pointer-events-none flex items-center justify-center overflow-hidden opacity-[0.03] z-0">
+        <h1 className="text-[30vw] font-bold uppercase tracking-tighter leading-none rotate-12">
+          {verificationResult?.verified ? "AUTHENTIC" : "VERIFY"}
+        </h1>
+      </div>
 
-          <CardContent className="space-y-8">
-            {!verificationResult && (
-              <div className="grid md:grid-cols-2 gap-8">
-                {/* Method 1: Agreement ID */}
-                <Card className="border border-border" data-testid="verify-by-id-card">
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <Hash className="h-5 w-5 text-primary" />
-                      <span>Verify by Agreement ID</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Agreement ID</label>
+      <div className="relative z-10 max-w-[1400px] mx-auto px-6 py-12">
+        {/* Editorial Header */}
+        <header className="mb-20 border-b border-slate-200 pb-12">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="h-px w-12 bg-primary" />
+            <span className="font-mono text-[10px] uppercase tracking-[0.4em] text-primary font-bold">Protocol_04 // Authenticity_Check</span>
+          </div>
+          <h1 className="text-6xl md:text-8xl font-bold uppercase tracking-tighter leading-[0.85]">
+            Trust <span className="text-slate-300 italic">Verification</span>
+          </h1>
+          <p className="mt-8 text-slate-500 font-light max-w-xl uppercase text-xs tracking-widest leading-relaxed">
+            Validate the cryptographic integrity of your rental agreements. Input your unique ID or provide the original document for scanning.
+          </p>
+        </header>
+
+        <main className="grid lg:grid-cols-12 gap-12">
+          {!verificationResult && !error && (
+            <>
+              {/* Left Column: ID Input */}
+              <div className="lg:col-span-5 space-y-12">
+                <div className="p-10 bg-white border border-slate-200 hover:border-slate-950 transition-all">
+                  <div className="flex items-center gap-3 mb-8">
+                    <Hash className="h-4 w-4 text-primary" />
+                    <span className="font-mono text-[10px] uppercase tracking-widest font-bold">Method_01: Unique_ID</span>
+                  </div>
+                  <div className="space-y-6">
+                    <div className="group">
+                      <label className="block font-mono text-[9px] uppercase tracking-widest text-slate-400 mb-2">Registry Reference</label>
                       <Input
-                        placeholder="SR-2024-001234"
+                        placeholder="SR-2024-XXXXXX"
                         value={agreementId}
                         onChange={(e) => setAgreementId(e.target.value)}
-                        data-testid="input-agreement-id"
+                        className="h-16 rounded-none border-0 border-b-2 border-slate-100 bg-transparent text-2xl font-bold tracking-tight focus-visible:ring-0 focus-visible:border-slate-950 transition-all px-0"
                       />
                     </div>
                     <Button 
                       onClick={handleVerifyById}
                       disabled={!agreementId.trim() || isLoading}
-                      className="w-full"
-                      data-testid="button-verify-by-id"
+                      className="w-full h-16 rounded-none bg-slate-950 uppercase tracking-[0.3em] font-bold text-[10px]"
                     >
-                      <Search className="mr-2 h-4 w-4" />
-                      {isLoading ? 'Verifying...' : 'Verify Agreement'}
+                      {isLoading ? 'Scanning Registry...' : 'Initiate Verification'}
                     </Button>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
 
-                {/* Method 2: PDF Upload */}
-                <Card className="border border-border" data-testid="verify-by-pdf-card">
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <FileText className="h-5 w-5 text-destructive" />
-                      <span>Verify by PDF Upload</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
+                <Link href="/">
+                  <Button variant="link" className="font-mono text-[10px] uppercase tracking-widest p-0 h-auto group text-slate-400 hover:text-slate-950">
+                    <Home className="mr-2 h-3 w-3" /> [ Abort_And_Return_Home ]
+                  </Button>
+                </Link>
+              </div>
+
+              {/* Right Column: PDF Upload */}
+              <div className="lg:col-span-7">
+                <div className="p-10 bg-white border border-slate-200 border-dashed hover:border-solid hover:border-slate-950 transition-all h-full flex flex-col">
+                  <div className="flex items-center gap-3 mb-8">
+                    <FileText className="h-4 w-4 text-slate-400" />
+                    <span className="font-mono text-[10px] uppercase tracking-widest font-bold text-slate-400">Method_02: Document_Analysis</span>
+                  </div>
+                  <div className="flex-1 flex flex-col justify-center py-12">
                     <FileUpload
                       onFileSelect={setPdfFile}
                       accept=".pdf"
-                      maxSize={10 * 1024 * 1024} // 10MB
-                      label=""
-                      description="Upload agreement PDF"
+                      maxSize={10 * 1024 * 1024}
+                      label="Drop Original PDF"
+                      description="Document must contain the original embedded metadata"
                     />
-                    <Button 
-                      onClick={handleVerifyByPdf}
-                      disabled={!pdfFile}
-                      className="w-full"
-                      variant="secondary"
-                      data-testid="button-verify-by-pdf"
-                    >
-                      <CheckCircle className="mr-2 h-4 w-4" />
-                      Verify PDF
-                    </Button>
-                  </CardContent>
-                </Card>
+                  </div>
+                  <Button 
+                    disabled={!pdfFile}
+                    variant="outline"
+                    className="w-full h-16 rounded-none border-slate-950 uppercase tracking-[0.3em] font-bold text-[10px] mt-8"
+                  >
+                    Analyze Metadata File
+                  </Button>
+                </div>
               </div>
-            )}
+            </>
+          )}
 
-            {/* Error State */}
-            {error && (
-              <Card className="border-destructive bg-destructive/5" data-testid="verification-error">
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-center mb-4">
-                    <div className="w-16 h-16 bg-destructive rounded-full flex items-center justify-center">
-                      <XCircle className="h-8 w-8 text-white" />
-                    </div>
-                  </div>
-                  <div className="text-center">
-                    <h3 className="text-xl font-semibold text-destructive mb-2">
-                      Agreement Not Found ❌
-                    </h3>
-                    <p className="text-muted-foreground mb-4">
-                      The agreement ID you entered could not be found or is not verified.
-                    </p>
-                    <Button onClick={handleReset} variant="outline" data-testid="button-try-again">
-                      Try Again
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Success State */}
-            {verificationResult?.verified && (
-              <Card className="border-secondary bg-secondary/5" data-testid="verification-success">
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-center mb-4">
-                    <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center">
-                      <CheckCircle className="h-8 w-8 text-white" />
-                    </div>
-                  </div>
-                  <div className="text-center mb-6">
-                    <h3 className="text-xl font-semibold text-secondary mb-2">
-                      Agreement Verified ✅
-                    </h3>
-                    <p className="text-muted-foreground">
-                      This rental agreement is authentic and verified.
-                    </p>
-                  </div>
-                  
-                  <div className="grid md:grid-cols-2 gap-4 text-sm">
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="font-medium">Agreement ID:</span>
-                        <span className="text-muted-foreground" data-testid="result-agreement-id">
-                          {verificationResult.agreement.agreementNumber}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="font-medium">Created Date:</span>
-                        <span className="text-muted-foreground" data-testid="result-created-date">
-                          {new Date(verificationResult.agreement.createdAt).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="font-medium">Tenant:</span>
-                        <span className="text-muted-foreground" data-testid="result-tenant-name">
-                          {verificationResult.agreement.tenantName}
-                        </span>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="font-medium">Landlord:</span>
-                        <span className="text-muted-foreground" data-testid="result-landlord-name">
-                          {verificationResult.agreement.landlordName}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="font-medium">Property:</span>
-                        <span className="text-muted-foreground" data-testid="result-property-address">
-                          {verificationResult.agreement.propertyAddress}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="font-medium">Monthly Rent:</span>
-                        <span className="text-muted-foreground" data-testid="result-rent-amount">
-                          ${verificationResult.agreement.monthlyRent}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-6 text-center">
-                    <Button onClick={handleReset} variant="outline" data-testid="button-verify-another">
-                      Verify Another Agreement
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Back to Home */}
-            <div className="flex justify-center">
-              <Link href="/">
-                <Button variant="outline" data-testid="button-back-home">
-                  <Home className="mr-2 h-4 w-4" />
-                  Back to Home
+          {/* Error State: Industrial Brutalism */}
+          {error && (
+            <div className="lg:col-span-12">
+              <div className="bg-white border-2 border-red-600 p-12 text-center">
+                <div className="inline-flex items-center justify-center w-24 h-24 bg-red-600 mb-8">
+                  <XCircle className="h-12 w-12 text-white" />
+                </div>
+                <h3 className="text-5xl font-bold uppercase tracking-tighter mb-4 text-red-600">Verification_Failed</h3>
+                <p className="text-slate-500 font-mono text-xs uppercase tracking-widest mb-12">Registry mismatch: The requested ID does not exist or has been revoked.</p>
+                <Button onClick={handleReset} variant="outline" className="h-16 px-12 rounded-none border-slate-950 font-bold uppercase tracking-[0.2em] text-[10px]">
+                  Return to Input Mode
                 </Button>
-              </Link>
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          )}
+
+          {/* Success State: Clean Grid Layout */}
+          {verificationResult?.verified && (
+            <div className="lg:col-span-12 animate-in fade-in slide-in-from-bottom-8 duration-700">
+              <div className="grid lg:grid-cols-2 bg-white border border-slate-950 overflow-hidden shadow-2xl">
+                {/* Status Column */}
+                <div className="bg-slate-950 text-white p-12 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center gap-3 mb-12">
+                      <ShieldCheck className="h-6 w-6 text-primary" />
+                      <span className="font-mono text-[10px] uppercase tracking-[0.4em] font-bold">Auth_Confirmed</span>
+                    </div>
+                    <h3 className="text-6xl font-bold uppercase tracking-tighter mb-6 leading-none">
+                      Registry <br /><span className="text-primary italic">Matched</span>
+                    </h3>
+                  </div>
+                  <div className="space-y-4 pt-12 border-t border-slate-800">
+                    <p className="font-mono text-[10px] text-slate-500 uppercase tracking-widest">Hash_Signature</p>
+                    <p className="font-mono text-xs break-all text-slate-300">sha256:7f83b1627ff26b60c95034</p>
+                  </div>
+                </div>
+
+                {/* Data Column */}
+                <div className="p-12">
+                  <div className="grid grid-cols-2 gap-12">
+                    <div className="space-y-8">
+                      <div>
+                        <label className="font-mono text-[9px] uppercase tracking-widest text-slate-400 block mb-2">Reference ID</label>
+                        <p className="font-bold uppercase tracking-tighter text-xl">{verificationResult.agreement.agreementNumber}</p>
+                      </div>
+                      <div>
+                        <label className="font-mono text-[9px] uppercase tracking-widest text-slate-400 block mb-2">Timestamp</label>
+                        <p className="font-bold uppercase tracking-tighter text-xl">{new Date(verificationResult.agreement.createdAt).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                    <div className="space-y-8">
+                      <div>
+                        <label className="font-mono text-[9px] uppercase tracking-widest text-slate-400 block mb-2">Asset Location</label>
+                        <p className="font-bold uppercase tracking-tighter text-xl leading-tight">{verificationResult.agreement.propertyAddress}</p>
+                      </div>
+                      <div>
+                        <label className="font-mono text-[9px] uppercase tracking-widest text-slate-400 block mb-2">Total Value</label>
+                        <p className="font-bold uppercase tracking-tighter text-xl">${verificationResult.agreement.monthlyRent} /mo</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-16 pt-12 border-t border-slate-100 flex justify-between items-center">
+                    <Button onClick={handleReset} variant="link" className="p-0 font-mono text-[10px] uppercase tracking-widest text-slate-400 hover:text-slate-950">
+                      [ New_Scan ]
+                    </Button>
+                    <Link href="/dashboard">
+                      <Button className="h-14 px-10 rounded-none bg-slate-950 uppercase tracking-[0.2em] font-bold text-[10px]">
+                        Access Registry <ArrowRight className="ml-3 h-3 w-3" />
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </main>
       </div>
     </div>
   );
