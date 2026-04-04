@@ -1,5 +1,5 @@
 // server/index.ts
-import dotenv from "dotenv";
+import dotenv2 from "dotenv";
 import express2 from "express";
 
 // server/routes.ts
@@ -335,30 +335,31 @@ var insertOtpVerificationSchema = otpVerificationSchema.omit({
 
 // server/services/firebase.ts
 var FirebaseService = class {
+  generateOtp() {
+    return Math.floor(1e5 + Math.random() * 9e5).toString();
+  }
   async sendPhoneOtp(phoneNumber) {
     try {
-      const otp = Math.floor(1e5 + Math.random() * 9e5).toString();
-      console.log(`\u{1F4F1} Phone OTP for ${phoneNumber}: ${otp}`);
-      console.log(`\u2139\uFE0F  In production, this would be sent via Firebase Auth phone verification`);
+      const otp = this.generateOtp();
+      console.log(`\u{1F4F1} [SMS] To: ${phoneNumber} | Code: ${otp}`);
       return otp;
     } catch (error) {
-      console.error("Error sending phone OTP:", error);
+      console.error("Error in sendPhoneOtp:", error);
       throw new Error("Failed to send phone OTP");
     }
   }
   async sendEmailOtp(email) {
     try {
-      const otp = Math.floor(1e5 + Math.random() * 9e5).toString();
-      console.log(`\u{1F4E7} Email OTP for ${email}: ${otp}`);
-      console.log(`\u2139\uFE0F  OTP will be sent via SendGrid email service`);
+      const otp = this.generateOtp();
+      console.log(`\u{1F4E7} [Email] To: ${email} | Code: ${otp}`);
       return otp;
     } catch (error) {
-      console.error("Error sending email OTP:", error);
+      console.error("Error in sendEmailOtp:", error);
       throw new Error("Failed to send email OTP");
     }
   }
-  async verifyOtp(otp, expectedOtp) {
-    return otp === expectedOtp;
+  async verifyOtp(providedOtp, actualOtp) {
+    return providedOtp === actualOtp;
   }
 };
 var firebaseService = new FirebaseService();
@@ -366,19 +367,25 @@ var firebaseService = new FirebaseService();
 // server/services/pdf-generator.ts
 import PDFDocument from "pdfkit";
 var PdfGeneratorService = class {
-  generateAgreementPdf(agreement) {
+  /**
+   * Generates a PDF Buffer for a given Rental Agreement
+   */
+  async generateAgreementPdf(agreement) {
     return new Promise((resolve, reject) => {
       try {
-        const doc = new PDFDocument({ margin: 50 });
+        const doc = new PDFDocument({
+          margin: 50,
+          size: "A4",
+          bufferPages: true
+        });
         const chunks = [];
         doc.on("data", (chunk) => chunks.push(chunk));
         doc.on("end", () => resolve(Buffer.concat(chunks)));
-        doc.on("error", reject);
+        doc.on("error", (err) => reject(err));
         doc.fontSize(20).font("Helvetica-Bold").text("RENTAL AGREEMENT", { align: "center" });
-        doc.fontSize(12).font("Helvetica").text(`Agreement Number: ${agreement.agreementNumber}`, { align: "center" });
+        doc.fontSize(10).font("Helvetica").text(`Agreement Number: ${agreement.agreementNumber}`, { align: "center" });
         doc.moveDown(2);
-        doc.fontSize(14).font("Helvetica-Bold").text("RENTAL AGREEMENT DETAILS");
-        doc.moveDown(0.5);
+        this.renderSectionHeader(doc, "RENTAL AGREEMENT DETAILS");
         doc.fontSize(12).font("Helvetica");
         doc.text(`Property Address: ${agreement.propertyAddress}`);
         doc.text(`Monthly Rent: $${agreement.monthlyRent}`);
@@ -386,29 +393,26 @@ var PdfGeneratorService = class {
           doc.text(`Security Deposit: $${agreement.securityDeposit}`);
         }
         doc.text(`Lease Duration: ${agreement.leaseDuration}`);
-        doc.text(`Lease Start Date: ${agreement.leaseStartDate}`);
-        doc.text(`Lease End Date: ${agreement.leaseEndDate}`);
-        doc.moveDown(1);
-        doc.fontSize(14).font("Helvetica-Bold").text("TENANT INFORMATION");
-        doc.moveDown(0.5);
+        doc.text(`Lease Start Date: ${this.formatDate(agreement.leaseStartDate)}`);
+        doc.text(`Lease End Date: ${this.formatDate(agreement.leaseEndDate)}`);
+        doc.moveDown(1.5);
+        this.renderSectionHeader(doc, "TENANT INFORMATION");
         doc.fontSize(12).font("Helvetica");
         doc.text(`Full Name: ${agreement.tenantFullName}`);
         doc.text(`Email: ${agreement.tenantEmail}`);
         doc.text(`Phone: ${agreement.tenantPhone}`);
-        doc.text(`Date of Birth: ${agreement.tenantDob}`);
-        doc.text(`Address: ${agreement.tenantAddress}`);
-        doc.moveDown(1);
-        doc.fontSize(14).font("Helvetica-Bold").text("LANDLORD INFORMATION");
-        doc.moveDown(0.5);
+        doc.text(`Date of Birth: ${this.formatDate(agreement.tenantDob)}`);
+        doc.text(`Current Address: ${agreement.tenantAddress}`);
+        doc.moveDown(1.5);
+        this.renderSectionHeader(doc, "LANDLORD INFORMATION");
         doc.fontSize(12).font("Helvetica");
         doc.text(`Full Name: ${agreement.landlordFullName}`);
         doc.text(`Email: ${agreement.landlordEmail}`);
         doc.text(`Phone: ${agreement.landlordPhone}`);
         doc.text(`Address: ${agreement.landlordAddress}`);
-        doc.moveDown(2);
-        doc.fontSize(14).font("Helvetica-Bold").text("TERMS AND CONDITIONS");
-        doc.moveDown(0.5);
-        doc.fontSize(11).font("Helvetica");
+        doc.moveDown(1.5);
+        this.renderSectionHeader(doc, "TERMS AND CONDITIONS");
+        doc.fontSize(10).font("Helvetica");
         const terms = [
           "1. The tenant agrees to pay rent on or before the first day of each month.",
           "2. The security deposit will be returned within 30 days of lease termination, subject to property condition.",
@@ -420,133 +424,143 @@ var PdfGeneratorService = class {
           "8. Any modifications to this agreement must be in writing and signed by both parties."
         ];
         terms.forEach((term) => {
-          doc.text(term, { indent: 20 });
-          doc.moveDown(0.3);
+          doc.text(term, { indent: 15 });
+          doc.moveDown(0.4);
         });
-        doc.moveDown(2);
-        doc.fontSize(14).font("Helvetica-Bold").text("SIGNATURES");
-        doc.moveDown(1);
+        doc.moveDown(1.5);
+        if (doc.y > 600) doc.addPage();
+        this.renderSectionHeader(doc, "SIGNATURES");
         doc.fontSize(12).font("Helvetica");
+        doc.moveDown(1);
         doc.text("Tenant Signature: _________________________", { continued: true });
         doc.text("Date: ___________", { align: "right" });
         doc.moveDown(0.5);
         doc.text(`Print Name: ${agreement.tenantFullName}`);
-        doc.moveDown(1.5);
+        doc.moveDown(2);
         doc.text("Landlord Signature: _________________________", { continued: true });
         doc.text("Date: ___________", { align: "right" });
         doc.moveDown(0.5);
         doc.text(`Print Name: ${agreement.landlordFullName}`);
-        doc.moveDown(2);
-        doc.fontSize(10).font("Helvetica").text("This document was generated by SafeRental platform and is legally binding when signed by both parties.", { align: "center" });
-        doc.text(`Generated on: ${(/* @__PURE__ */ new Date()).toLocaleDateString()}`, { align: "center" });
+        const bottom = doc.page.height - 70;
+        doc.fontSize(9).fillColor("grey").text("This document was generated by SafeRental platform and is legally binding when signed.", 50, bottom, { align: "center" }).text(`Generated on: ${(/* @__PURE__ */ new Date()).toLocaleDateString()}`, { align: "center" });
         doc.end();
       } catch (error) {
         reject(error);
       }
     });
   }
+  // Helper to keep formatting consistent
+  renderSectionHeader(doc, title) {
+    doc.fontSize(13).font("Helvetica-Bold").fillColor("black").text(title);
+    doc.moveDown(0.5);
+  }
+  // Helper to handle date strings/objects safely
+  formatDate(dateInput) {
+    if (!dateInput) return "N/A";
+    const date = new Date(dateInput);
+    return isNaN(date.getTime()) ? dateInput : date.toLocaleDateString();
+  }
 };
 var pdfGeneratorService = new PdfGeneratorService();
 
 // server/services/email.ts
-import sgMail from "@sendgrid/mail";
+import nodemailer from "nodemailer";
+import dotenv from "dotenv";
+dotenv.config();
 var EmailService = class {
+  // Use the email verified in your SMTP settings
   fromEmail = process.env.FROM_EMAIL || "noreply@saferental.com";
+  transporter = null;
   constructor() {
-    const apiKey = process.env.SENDGRID_API_KEY;
-    if (apiKey) {
-      sgMail.setApiKey(apiKey);
-      console.log(apiKey);
+    const smtpHost = process.env.SMTP_HOST;
+    const smtpUser = process.env.SMTP_USER;
+    const smtpPass = process.env.SMTP_PASS;
+    if (smtpHost && smtpUser && smtpPass) {
+      this.transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: parseInt(process.env.SMTP_PORT || "587"),
+        secure: process.env.SMTP_SECURE === "true",
+        // true for 465, false for other ports
+        auth: {
+          user: smtpUser,
+          pass: smtpPass
+        }
+      });
+    } else {
+      console.warn("\u26A0\uFE0F SMTP Credentials are missing from environment variables.");
     }
   }
   async sendEmail(params) {
     try {
-      const apiKey = process.env.SENDGRID_API_KEY;
-      if (!apiKey) {
-        console.log("SendGrid API key not found, simulating email send:", {
+      if (!this.transporter) {
+        console.log("\u{1F6E0}\uFE0F SIMULATION: Email would be sent:", {
           to: params.to,
-          from: params.from || this.fromEmail,
           subject: params.subject,
-          hasAttachment: !!params.attachments?.length
+          attachments: params.attachments?.map((a) => a.filename)
         });
         return true;
       }
-      const msg = {
+      const mailOptions = {
         to: params.to,
         from: params.from || this.fromEmail,
         subject: params.subject,
-        ...params.text && { text: params.text },
-        ...params.html && { html: params.html },
-        ...params.attachments && params.attachments.length > 0 && {
-          attachments: params.attachments.map((att) => ({
-            filename: att.filename,
-            content: att.content.toString("base64"),
-            type: att.type,
-            disposition: "attachment"
-          }))
-        }
+        text: params.text || "",
+        html: params.html || "",
+        // Nodemailer handles Buffers natively, simpler than SendGrid
+        attachments: params.attachments?.map((att) => ({
+          filename: att.filename,
+          content: att.content,
+          // Nodemailer accepts Buffer directly
+          contentType: att.type,
+          disposition: "attachment"
+        }))
       };
-      await sgMail.send(msg);
-      console.log(`Email sent successfully to ${params.to}`);
+      await this.transporter.sendMail(mailOptions);
+      console.log(`\u2705 Email sent successfully to ${params.to}`);
       return true;
     } catch (error) {
-      console.error("Email sending error:", error);
+      console.error("\u274C Email Sending Error:");
+      if (error.response) {
+        console.error(error.response);
+      } else {
+        console.error(error.message);
+      }
       return false;
     }
   }
   async sendOtpEmail(email, otp) {
     const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #3b82f6;">SafeRental - Email Verification</h2>
+      <div style="font-family: sans-serif; max-width: 600px; border: 1px solid #eee; padding: 20px;">
+        <h2 style="color: #3b82f6;">SafeRental Verification</h2>
         <p>Your verification code is:</p>
-        <div style="background: #f3f4f6; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #1f2937;">
+        <div style="background: #f4f4f4; padding: 15px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px;">
           ${otp}
         </div>
-        <p>This code will expire in 10 minutes.</p>
-        <p>If you didn't request this verification, please ignore this email.</p>
+        <p>This code expires in 10 minutes.</p>
       </div>
     `;
     return this.sendEmail({
       to: email,
-      from: this.fromEmail,
-      subject: "SafeRental - Email Verification Code",
+      subject: "SafeRental Verification Code",
       html
     });
   }
   async sendAgreementPdf(tenantEmail, landlordEmail, agreementNumber, pdfBuffer) {
     const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #3b82f6;">SafeRental - Your Rental Agreement</h2>
-        <p>Your rental agreement has been successfully generated and verified.</p>
-        <p><strong>Agreement Number:</strong> ${agreementNumber}</p>
-        <p>Please find your rental agreement attached to this email.</p>
-        <p>Keep this document safe as it serves as your legal rental agreement.</p>
-        <p>Thank you for using SafeRental!</p>
+      <div style="font-family: sans-serif; padding: 20px;">
+        <h2>Your Rental Agreement</h2>
+        <p>Agreement <strong>${agreementNumber}</strong> is ready and attached.</p>
       </div>
     `;
-    const tenantSuccess = await this.sendEmail({
-      to: tenantEmail,
-      from: this.fromEmail,
-      subject: `SafeRental - Rental Agreement ${agreementNumber}`,
-      html,
-      attachments: [{
-        filename: `rental-agreement-${agreementNumber}.pdf`,
-        content: pdfBuffer,
-        type: "application/pdf"
-      }]
-    });
-    const landlordSuccess = await this.sendEmail({
-      to: landlordEmail,
-      from: this.fromEmail,
-      subject: `SafeRental - Rental Agreement ${agreementNumber}`,
-      html,
-      attachments: [{
-        filename: `rental-agreement-${agreementNumber}.pdf`,
-        content: pdfBuffer,
-        type: "application/pdf"
-      }]
-    });
-    return tenantSuccess && landlordSuccess;
+    const attachment = {
+      filename: `agreement-${agreementNumber}.pdf`,
+      content: pdfBuffer,
+      type: "application/pdf"
+    };
+    const tenantTask = this.sendEmail({ to: tenantEmail, subject: "Your Agreement", html, attachments: [attachment] });
+    const landlordTask = this.sendEmail({ to: landlordEmail, subject: "Your Agreement", html, attachments: [attachment] });
+    const results = await Promise.all([tenantTask, landlordTask]);
+    return results.every((res) => res === true);
   }
 };
 var emailService = new EmailService();
@@ -903,7 +917,7 @@ async function setupVite(app2, server) {
   });
 }
 function serveStatic(app2) {
-  const distPath = path3.resolve(import.meta.dirname, "public");
+  const distPath = path3.resolve(import.meta.dirname, "..", "dist", "public");
   if (!fs2.existsSync(distPath)) {
     throw new Error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`
@@ -916,7 +930,7 @@ function serveStatic(app2) {
 }
 
 // server/index.ts
-dotenv.config();
+dotenv2.config();
 var app = express2();
 app.use(express2.json());
 app.use(express2.urlencoded({ extended: false }));
@@ -962,8 +976,7 @@ app.use((req, res, next) => {
   const port = parseInt(process.env.PORT || "5000", 10);
   server.listen({
     port,
-    host: "0.0.0.0",
-    reusePort: true
+    host: "localhost"
   }, () => {
     log(`serving on port ${port}`);
   });
