@@ -62,24 +62,58 @@ export default function AgreementForm() {
     defaultValues: {
       tenantFullName: "", tenantEmail: "", tenantPhone: "", tenantDob: "", tenantAddress: "",
       landlordFullName: "", landlordEmail: "", landlordPhone: "", landlordAddress: "",
-      propertyAddress: "", monthlyRent: "", securityDeposit: "", leaseDuration: "",
+      propertyAddress: "", monthlyRent: "", securityDeposit: "", leaseDuration: "", 
       leaseStartDate: "", leaseEndDate: "",
     },
   });
 
   const createAgreementMutation = useMutation({
     mutationFn: async (data: AgreementFormData) => {
+      // Validate files are present
+      if (!tenantIdProof || !landlordIdProof) {
+        throw new Error('Both ID proof documents are required');
+      }
+
+      // Log what we're sending for debugging
+      console.log('📨 Sending agreement data:', data);
+      console.log('📎 Files:', { tenantIdProof: tenantIdProof.name, landlordIdProof: landlordIdProof.name });
+
+      // Create FormData with form fields and files
       const formData = new FormData();
-      Object.entries(data).forEach(([key, value]) => formData.append(key, value || ""));
-      if (tenantIdProof) formData.append('tenantIdProof', tenantIdProof);
-      if (landlordIdProof) formData.append('landlordIdProof', landlordIdProof);
+      
+      // Add all form fields
+      Object.entries(data).forEach(([key, value]) => {
+        formData.append(key, String(value || ''));
+      });
+      
+      // Add files
+      formData.append('tenantIdProof', tenantIdProof);
+      formData.append('landlordIdProof', landlordIdProof);
+      
+      // Debug FormData before sending
+      console.log('📦 FormData entries:');
+      for (let [key, value] of formData.entries()) {
+        if (value instanceof File) {
+          console.log(`  ${key}: File(${value.name}, ${value.type}, ${value.size} bytes)`);
+        } else {
+          console.log(`  ${key}: ${value}`);
+        }
+      }
       
       const response = await fetch('/api/agreements', {
         method: 'POST',
         body: formData,
       });
-      if (!response.ok) throw new Error('Failed to create agreement');
-      return response.json();
+      
+      const responseData = await response.json();
+      
+      if (!response.ok) {
+        console.error('❌ Server error:', responseData);
+        throw new Error(responseData.message || 'Failed to create agreement');
+      }
+      
+      console.log('✅ Agreement created successfully:', responseData);
+      return responseData;
     },
     onSuccess: (data) => {
       setAgreementId(data.id);
@@ -87,7 +121,8 @@ export default function AgreementForm() {
       toast({ title: "Success!", description: "Agreement created. Please verify identities." });
     },
     onError: (error: any) => {
-      toast({ title: "Error", description: error?.message, variant: "destructive" });
+      console.error('❌ Mutation error:', error);
+      toast({ title: "Error", description: error?.message || 'Failed to create agreement', variant: "destructive" });
     }
   });
 
@@ -122,7 +157,10 @@ export default function AgreementForm() {
         });
         return;
       }
-      createAgreementMutation.mutate(data);
+      // Get ALL form values from all steps, not just the current step
+      const allFormValues = form.getValues() as AgreementFormData;
+      console.log('📋 All form values:', allFormValues);
+      createAgreementMutation.mutate(allFormValues);
     }
   };
 
@@ -257,6 +295,9 @@ export default function AgreementForm() {
                       )} />
                       <FormField control={form.control} name="securityDeposit" render={({ field }) => (
                         <FormItem><FormLabel>Security Deposit ($)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={form.control} name="leaseDuration" render={({ field }) => (
+                        <FormItem><FormLabel>Lease Duration (e.g., "12 months")</FormLabel><FormControl><Input placeholder="12 months" {...field} /></FormControl><FormMessage /></FormItem>
                       )} />
                       <FormField control={form.control} name="leaseStartDate" render={({ field }) => (
                         <FormItem><FormLabel>Start Date</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>

@@ -5,9 +5,12 @@
   "license": "MIT",
   "scripts": {
     "dev": "tsx server/index.ts",
+    "dev:backend": "tsx server/index.ts",
+    "dev:frontend": "cd client && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "dev:all": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start": "NODE_ENV=production node dist/index.js",
-    "dev:all": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "check": "tsc",
     "render-postbuild": "npm run build"
   },
@@ -108,6 +111,7 @@
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.1",
     "@types/ws": "^8.5.13",
+    "concurrently": "^8.2.2",
     "drizzle-kit": "^0.30.4",
     "tsx": "^4.19.1"
   },

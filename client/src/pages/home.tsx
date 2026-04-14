@@ -5,7 +5,7 @@ import { Shield, FileText, Download, CheckCircle, User, Github, Linkedin, Twitte
 export default function Home() {
   return (
     <div className="min-h-screen bg-[#fafafa] text-slate-950 font-sans selection:bg-primary selection:text-white">
-      {/* Navigation / Header Mockup */}
+      {/* Navigation / Header Mockup
       <nav className="border-b border-slate-200 px-6 py-4 flex justify-between items-center bg-white sticky top-0 z-50">
         <span className="font-bold tracking-tighter text-xl italic">SAFERENTAL.</span>
         <div className="hidden md:flex gap-8 text-xs font-medium uppercase tracking-widest">
@@ -18,7 +18,7 @@ export default function Home() {
             Get Started
           </Button>
         </Link>
-      </nav>
+      </nav> */}
 
       {/* Hero Section */}
       <section className="relative px-6 pt-24 pb-32 border-b border-slate-200 bg-white" data-testid="hero-section">

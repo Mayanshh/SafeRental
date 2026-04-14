@@ -58,27 +58,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ID documents should never be publicly accessible
   
   // Create rental agreement
-  app.post('/api/agreements', upload.fields([
-    { name: 'tenantIdProof', maxCount: 1 },
-    { name: 'landlordIdProof', maxCount: 1 }
-  ]), async (req, res) => {
+  app.post('/api/agreements', upload.any(), async (req, res) => {
     try {
-      const validatedData = insertAgreementSchema.parse(req.body);
+      // Handle file uploads - with upload.any(), files are in req.files array
+      const filesArray = (req.files || []) as Express.Multer.File[];
       
-      // Handle file uploads
-      const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+      // Detailed debugging for FormData parsing
+      console.log('═══════════════════════════════════');
+      console.log('📨 POST /api/agreements request received');
+      console.log('Content-Type:', req.headers['content-type']);
+      console.log('Header keys:', Object.keys(req.headers));
+      console.log('─────────────────────────────────');
+      console.log('📄 req.body:', req.body);
+      console.log('📎 files count:', filesArray.length);
+      
+      if (filesArray.length > 0) {
+        console.log('📎 Files received:');
+        filesArray.forEach((f) => console.log(`  - ${f.fieldname}: ${f.filename} (${f.mimetype})`));
+      } else {
+        console.log('⚠️  NO FILES RECEIVED');
+      }
+      
+      console.log('─────────────────────────────────');
+      
+      // Check if body is empty
+      if (!req.body || Object.keys(req.body).length === 0) {
+        console.log('⚠️  WARNING: req.body is empty!');
+        console.log('This suggests FormData fields were not parsed');
+      }
+      
+      const validatedData = insertAgreementSchema.parse(req.body);
+      const tenantIdProofFile = filesArray.find(f => f.fieldname === 'tenantIdProof');
+      const landlordIdProofFile = filesArray.find(f => f.fieldname === 'landlordIdProof');
       
       // Server-side validation: Require both ID proof files
-      if (!files.tenantIdProof || !files.tenantIdProof[0]) {
+      if (!tenantIdProofFile) {
         return res.status(400).json({ message: 'Tenant ID proof document is required' });
       }
       
-      if (!files.landlordIdProof || !files.landlordIdProof[0]) {
+      if (!landlordIdProofFile) {
         return res.status(400).json({ message: 'Landlord ID proof document is required' });
       }
       
-      const tenantIdProofUrl = `/uploads/${files.tenantIdProof[0].filename}`;
-      const landlordIdProofUrl = `/uploads/${files.landlordIdProof[0].filename}`;
+      const tenantIdProofUrl = `/uploads/${tenantIdProofFile.filename}`;
+      const landlordIdProofUrl = `/uploads/${landlordIdProofFile.filename}`;
       
       const agreement = await dbStorage.createAgreement({
         ...validatedData,
@@ -87,9 +110,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       res.json(agreement);
-    } catch (error) {
-      console.error('Error creating agreement:', error);
-      res.status(400).json({ message: 'Failed to create agreement' });
+    } catch (error: any) {
+      console.log('═══════════════════════════════════');
+      console.log('❌ Error creating agreement:');
+      
+      if (error.name === 'ZodError') {
+        console.log('🔴 Validation Error (Zod):');
+        console.log(JSON.stringify(error.errors, null, 2));
+        return res.status(400).json({ 
+          message: 'Validation failed',
+          errors: error.errors.map((e: any) => ({
+            field: e.path.join('.'),
+            message: e.message
+          }))
+        });
+      }
+      
+      console.error('Error details:', error);
+      res.status(400).json({ message: error.message || 'Failed to create agreement' });
     }
   });
 
@@ -324,7 +362,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Get the appropriate file URL
-      let fileUrl: string | null = null;
+      let fileUrl: string | null | undefined = null;
       if (fileType === 'tenant') {
         fileUrl = agreement.tenantIdProofUrl;
       } else if (fileType === 'landlord') {
